@@ -16,11 +16,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+model_error_msg = ""
 model_path = os.path.join(os.path.dirname(__file__), '../models/final_tuned_model.joblib')
 try:
     pipeline = joblib.load(model_path)
-except FileNotFoundError:
+except Exception as e:
     pipeline = None
+    import traceback
+    model_error_msg = str(e) + "\n" + traceback.format_exc()
 
 mapping = {
     'housingTenure': {'Own': 'own', 'Rent': 'rent', 'For Free': 'for free'},
@@ -87,10 +90,9 @@ marital_map = {
 @app.post("/api/predict")
 async def predict_risk(request: Request):
     if pipeline is None:
-        raise HTTPException(status_code=500, detail="Model is not loaded.")
+        raise HTTPException(status_code=500, detail=f"Model is not loaded. Error: {model_error_msg}")
         
     req_data = await request.json()
-    print("Received Payload:", req_data)
 
     def map_val(field, val):
         return mapping.get(field, {}).get(val, str(val).lower())
