@@ -34,7 +34,7 @@ export function generateDeterministicSeed(inputs: RiskVectorInputs): string {
 
 export async function computeInference(inputs: RiskVectorInputs, customDossierId: string): Promise<InferenceOutcome> {
   try {
-    const response = await fetch('http://localhost:8000/api/predict', {
+    const response = await fetch('https://credit-scoring-model-m7xn.onrender.com/api/predict', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
