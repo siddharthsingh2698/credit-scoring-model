@@ -1,124 +1,104 @@
 # Credit Scoring Model
 
-A reproducible machine-learning project for estimating creditworthiness from financial profile data. This is an educational prototype and should not be treated as an autonomous lending decision system.
+## 1. Project Overview
+A machine-learning project for estimating creditworthiness from financial profile data. This is an educational prototype that implements a full end-to-end data science lifecycle, from data collection to hyperparameter tuning and model prediction.
 
-## Project Status
+## 2. Problem Statement
+Financial institutions need a consistent way to estimate the likelihood that an applicant will repay credit. Manual assessment can be time-consuming and inconsistent. This project aims to create a data-driven model that uses historical financial information to estimate credit risk reliably.
 
-This project is now complete through the full end-to-end workflow: dataset validation, feature engineering, preprocessing, model training, evaluation, save/load of the trained pipeline, and single-record prediction.
+## 3. Dataset Information
+The project uses the classic **German Credit Risk** dataset sourced from OpenML (originally UCI Machine Learning Repository). 
+- **Records**: 1,000
+- **Target Variable**: `class` (good / bad)
+- **Class Imbalance**: 70% good, 30% bad
 
-## Repository Structure
+*More details can be found in `data/raw/DATASET_INFO.md` and the Phase 3 EDA report.*
 
-```text
-credit-scoring-model/
-|-- app/
-|   `-- app.py
-|-- data/
-|   |-- processed/
-|   `-- raw/
-|       `-- credit_scoring_dataset.csv
-|-- models/
-|   `-- credit_scoring_pipeline.joblib
-|-- notebooks/
-|   |-- 01_eda.ipynb
-|   `-- 02_model_training.ipynb
-|-- reports/
-|   `-- figures/
-|-- src/
-|   |-- __init__.py
-|   |-- data_loader.py
-|   |-- features.py
-|   |-- preprocessing.py
-|   |-- train.py
-|   |-- evaluate.py
-|   |-- predict.py
-|   `-- __pycache__/
-|-- .gitignore
-|-- README.md
-|-- requirements.txt
-`-- tests/
-    `-- test_credit_scoring_pipeline.py
-```
+## 4. Features & Engineering
+The dataset contains 20 raw financial features (like `credit_amount`, `duration`, `checking_status`, and `age`). 
+During the preprocessing phase, we engineered four critical indicators:
+- `monthly_payment_estimate` (Credit amount / Duration)
+- `credit_per_age` (Credit amount / Age)
+- `is_multi_credit` (Flag for >1 existing credits)
+- `is_young_borrower` (Flag for Age < 25)
 
-## Dataset
-
-A synthetic credit-scoring dataset is included in `data/raw/credit_scoring_dataset.csv` so the project can run without external private financial data. The target variable is `risk_flag`, where:
-
-- `1` = low risk / creditworthy
-- `0` = high risk
-
-## Setup
-
+## 5. Installation
 1. Create and activate a virtual environment:
-
    ```powershell
-   py -m venv .venv
+   python -m venv .venv
    .\.venv\Scripts\Activate.ps1
    ```
-
 2. Install dependencies:
-
    ```powershell
    python -m pip install --upgrade pip
    python -m pip install -r requirements.txt
+   python -m pip install imbalanced-learn
    ```
 
-3. Generate or replace the dataset if needed:
+## 6. Project Structure
+```text
+credit-scoring-model/
+|-- app/
+|   `-- app.py                   # Prediction CLI
+|-- data/
+|   |-- processed/               # Cleaned & Engineered Data
+|   |   `-- split/               # Train/Test splits
+|   `-- raw/                     # Original OpenML dataset
+|-- models/
+|   `-- final_tuned_model.joblib # Final model weights
+|-- notebooks/
+|   `-- 01_eda.ipynb             # Exploratory Data Analysis
+|-- src/                         # Core Python modules
+|   |-- data_cleaning.py
+|   |-- evaluate.py
+|   |-- feature_engineering.py
+|   |-- model_optimization.py
+|   |-- preprocessing.py
+|   |-- train.py
+|   `-- train_test_split.py
+`-- README.md
+```
 
-   ```powershell
-   python -c "from src.data_loader import create_demo_dataset; create_demo_dataset()"
-   ```
-
-## Train the Models
-
+## 7. How to Train
+To retrain the baseline models from scratch using the processed data splits:
 ```powershell
-python -c "from src.data_loader import load_dataset; from src.train import train_and_evaluate; df = load_dataset('data/raw/credit_scoring_dataset.csv'); results = train_and_evaluate(df); print(results['best_model'])"
+python src/train.py
 ```
-
-This trains each of the required baseline models:
-
-- Logistic Regression
-- Decision Tree
-- Random Forest
-
-It evaluates them with accuracy, precision, recall, F1-score, ROC-AUC, and confusion matrix, then saves the best-performing pipeline to `models/credit_scoring_pipeline.joblib`.
-
-## Run Prediction
-
+To run the full cross-validation and hyperparameter tuning optimization suite:
 ```powershell
-python app/app.py --model-path models/credit_scoring_pipeline.joblib
+python src/model_optimization.py
 ```
 
-This loads the saved model and returns a predicted label plus probability for a sample applicant profile.
-
-## Example Applicant Input
-
-```python
-applicant = {
-    "age": 35,
-    "income": 85000,
-    "employment_years": 7,
-    "total_debt": 18000,
-    "monthly_debt_payment": 450,
-    "credit_history_years": 8,
-    "credit_utilization": 0.20,
-    "total_accounts": 8,
-    "late_payments": 1,
-    "payment_history_score": 80,
-    "loan_amount": 22000,
-    "loan_term": 48,
-}
+## 8. How to Evaluate
+To evaluate the baseline models against the untouched test set (200 records):
+```powershell
+python src/evaluate.py
+```
+To evaluate the final tuned model and extract feature importances:
+```powershell
+python src/final_evaluation.py
 ```
 
-## Responsible Use
+## 9. How to Run Prediction
+You can run the prediction interface to classify a sample applicant:
+```powershell
+python app/app.py
+```
+To run it on a specific JSON file of applicant data:
+```powershell
+python app/app.py --input path/to/applicant.json
+```
 
-The model is a learning exercise, not a legally validated credit decision engine. It should be interpreted as an association model and reviewed with human oversight, fairness checks, dataset documentation, and domain validation before any real-world use.
+## 10. Results
+The final tuned **Random Forest** model (using `class_weight='balanced'`) achieved the following metrics on unseen test data:
+- **Accuracy**: 73.0%
+- **ROC-AUC**: 78.5%
+- **F1-Score**: 80.8%
 
-## Verification
+The most highly associated factors for credit risk were our engineered `monthly_payment_estimate`, `checking_status`, and `credit_per_age`.
 
-The project includes automated tests in `tests/test_credit_scoring_pipeline.py` covering:
+## 11. Limitations
+The model is trained on a relatively small historical dataset from 1994 (Germany). It lacks modern macroeconomic indicators and alternative data points (e.g., utility bills). The 70/30 class imbalance was mitigated via class weighting, but false positives remain a challenge.
 
-- dataset loading and validation
-- feature engineering
-- preprocessing construction
-- model training and metrics
-- single-record prediction
+## 12. Responsible ML Considerations
+This model is a learning exercise, not a legally validated credit decision engine. Features like `age` and `foreign_worker` are included as per the original dataset, but in real-world modern lending, using protected characteristics can violate anti-discrimination laws (e.g., ECOA in the US). It should be interpreted as an association model and reviewed with human oversight and fairness checks before real-world use.
